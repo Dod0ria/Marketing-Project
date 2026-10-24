@@ -1,0 +1,16 @@
+# Local raw datasets (keep outside the repository)
+01_LG_Electronics_Appliances/
+05_Hospitality_Travel/
+data/
+datasets/
+appliance_brand_reviews.csv
+electronics_market_behavior.csv
+hospitality_bookings.csv
+
+# Local environment and temporary files
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.DS_Store
