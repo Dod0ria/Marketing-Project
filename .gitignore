@@ -1,4 +1,5 @@
-# Local raw datasets (keep outside the repository)
+# Store datasets in ../data/ outside the repository.
+# These rules guard against accidental copies inside the repository.
 01_LG_Electronics_Appliances/
 05_Hospitality_Travel/
 data/

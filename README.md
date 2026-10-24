@@ -1,58 +1,70 @@
 # Marketing-Project
-This Repository is used to coordinate the work of the Marketing Analytics course project
 
-Here is the link for the Interim Slides: https://canva.link/gmd20bli081apc9
-!DO NOT share it as allows everyone with the link to edit the presentation!
+Shared workspace for the Marketing Analytics course project: notebooks, Python scripts, notes, and analysis results.
 
+[Interim presentation slides](https://canva.link/gmd20bli081apc9)
 
-## Quick start: notebooks and local datasets
+**Do not share this link outside the team: anyone with the link can edit the presentation.**
 
-# 1. Put the datasets outside the repository
+## Project structure
 
-Each team member downloads the datasets from the course Dropbox on Blackboard and keeps this layout on their own computer:
+Create a personal local folder containing both the `Marketing-Project/` repository and a separate `data/` folder. Keep notebooks and scripts in the repository, and all datasets in `data/`, alongside the repository:
 
 ```text
-Your private project folder/
-├── Marketing-Project/                 # Git repository
+Your-personal-folder/       # Local folder; choose any name and location
+├── Marketing-Project/     # Git repository
 │   ├── README.md
 │   ├── .gitignore
-│   └── your notebooks and notes
-├── 01_LG_Electronics_Appliances/       # Local data, outside Git
-│   ├── appliance_brand_reviews.csv
-│   └── electronics_market_behavior.csv
-└── 05_Hospitality_Travel/
-    └── hospitality_bookings.csv
+│   ├── analysis.ipynb     # Example notebook
+│   └── analysis.py        # Example Python script
+└── data/                  # Local datasets, outside the repository
+    ├── dataset_01.csv
+    └── dataset_02.csv
 ```
 
-Your private folder can be anywhere. Keep the same dataset folder names, file names, and course file versions. Each person downloads their own copy; Git does not download or synchronize datasets. No setup scripts or configuration files are needed.
+File names in this example are placeholders. Keep the original names of your downloaded datasets and use those names in your code.
 
-# 2. Create a notebook and read a file
+## Local setup
 
-Open `Marketing-Project` in VS Code. Save your notebooks directly in the repository's main folder and select a Python kernel with pandas installed. If needed, install it in that environment with `python -m pip install pandas ipykernel`.
+1. Create a personal local folder and clone `Marketing-Project` inside it.
+2. Inside that same personal folder, create `data/` next to `Marketing-Project/`, as shown above. This folder is outside the repository and must be created separately on each computer.
+3. Download the datasets you need from the course Dropbox on Blackboard and place them in `data/`.
+4. Open `Marketing-Project` in VS Code and select your Python environment. For notebooks, select the same environment as the notebook kernel.
 
-Run this cell with `Marketing-Project` as the kernel's working directory:
+Install the required packages in that environment if needed:
+
+```bash
+python -m pip install pandas ipykernel
+```
+
+Each team member maintains their own `data/` folder outside the repository, so Git does not track its contents. To reproduce a teammate's analysis, use the same folder layout, dataset file names, and dataset versions.
+
+## Load a dataset
+
+Run notebooks and scripts with **`Marketing-Project` as the working directory**. This lets everyone use the same relative paths:
 
 ```python
 from pathlib import Path
 import pandas as pd
 
-DATA_DIR = Path("..").resolve()
-reviews = pd.read_csv(
-    DATA_DIR / "01_LG_Electronics_Appliances" / "appliance_brand_reviews.csv"
-)
-reviews.head()
+DATA_DIR = Path("..") / "data"
+df = pd.read_csv(DATA_DIR / "dataset_01.csv")
+print(df.head())
 ```
 
-`..` means one folder above the current working directory. Everyone uses the same code because the relative folder layout matches. For another dataset, change only the dataset subfolder and file name.
+`..` goes up from `Marketing-Project/` to your personal folder; `/ "data"` then selects the dataset folder beside the repository. Replace `dataset_01.csv` with the actual file name. Use this pattern in both notebooks and scripts; avoid paths tied to your own computer, such as `/Users/your-name/...`.
 
-# 3. Save and share your work
+For example, to run a script, open a terminal in `Marketing-Project` and run:
 
-- Keep all notebooks and observations in the repository. Write observations in Markdown cells or separate Markdown files.
-- Commit notebooks, notes, and intended analysis results. Keep downloaded datasets outside the repository.
-- `.gitignore` also excludes the known raw datasets if accidentally copied inside; it does not remove files already tracked by Git.
-- Before committing, clear notebook outputs displaying raw dataset rows. Keep your written observations and intended results.
+```bash
+python analysis.py
+```
 
-# Quick troubleshooting
+If a file cannot be found, run `print(Path.cwd())` to check that the working directory is `Marketing-Project`, then check that `../data/` contains the requested file.
 
-- **File not found:** run `print(Path.cwd())`. It should show `Marketing-Project`. Check the kernel's working directory, folder layout, and exact file names.
-- **Datasets not visible in Explorer:** opening the repository shows only its contents. The notebook can still read the external files. To display them, use **File → Add Folder to Workspace…** and select the dataset folders; this does not move them into Git.
+## Share your work
+
+- Commit notebooks, scripts, notes, and selected analysis results.
+- Write observations in notebook Markdown cells or separate Markdown files.
+- Keep datasets in the external `data/` folder. The dataset rules in `.gitignore` are only a safeguard against accidentally copying data into the repository.
+- Before committing a notebook, clear outputs that display raw dataset rows. Keep the explanations, charts, and summary results needed to understand the analysis.
