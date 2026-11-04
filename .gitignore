@@ -11,6 +11,7 @@ hospitality_bookings.csv
 # Local environment and temporary files
 .venv/
 venv/
+.venvMA/
 __pycache__/
 *.py[cod]
 .ipynb_checkpoints/
