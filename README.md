@@ -3,8 +3,8 @@
 Shared workspace for the Marketing Analytics course project: notebooks, Python scripts, notes, and analysis results.
 
 [Interim presentation slides](https://canva.link/gmd20bli081apc9)
-
 **Do not share this link outside the team: anyone with the link can edit the presentation.**
+[Questions for the 5th November session](https://docs.google.com/document/d/11z29qr9nko25WlZms9ccf-tvF4hAcb3u19lhjQIuHBY/edit?usp=sharing)
 
 ## Project structure
 
