@@ -1,16 +1,19 @@
-# Builds the working datasets for the LG TV project from the original behaviour file, and the tables that justify
-# the build decisions.
+# Builds the working datasets for the LG TV project from the original behaviour file, together with the tables that
+# document and justify the build decisions.
 # Run from Marketing-Project: python 01_build_tv_dataset.py
 # Reads  ../data/01_LG_Electronics_Appliances/electronics_market_behavior.csv
 # Writes ../data/01_LG_Electronics_Appliances/
 #          tv_events_clean.csv                       event level, TV only, six brands
 #          tv_considerations.csv                     one row per user x session x TV model
 #          tv_considerations_top_models.csv          rows of LG's and Samsung's top models only
-#          tv_considerations_without_top_models.csv  every other row (the other LG and Samsung models and all budget brands)
+#          tv_considerations_without_top_models.csv  every other row (the other LG and Samsung models and all other_four rows)
 #        results/build/
+#          build_parameters.csv       the parameters used below, read by 02_preliminary_analysis.py
+#          data_audit.csv             exclusions, key uniqueness, event-order checks and long sessions
 #          top_model_selection.csv    every LG and Samsung model ranked by considerations, with the top-model rule applied
-#          top_model_cutoffs.csv      what the top-model split looks like under the chosen rule and four alternatives
-#          variable_decisions.csv     conversion by each variable kept in the file and by each variable left out
+#          top_model_cutoffs.csv      the top-model split under the chosen rule and four alternatives
+#          variable_decisions.csv     conversion by each variable kept in the file and by each browsing variant left out
+#          reset_sensitivity.csv      position in the session with and without restarting the history after a purchase
 # Column definitions are in tv_considerations_dictionary.md. Requires pandas and numpy.
 from pathlib import Path
 import numpy as np
@@ -21,13 +24,19 @@ OUT_DIR = Path('results') / 'build'
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 KEY = ['user_id', 'session_id', 'product_id']
 SESSION = ['user_id', 'session_id']
-TOP_SHARE = 4.0          # a model is a top model when it holds at least this % of its brand's considerations
-SIMILAR = np.log(1.2)    # used only in the check of the price-similarity variable that was left out
-RESULT_NAMES = {'lg': 'bought_lg', 'samsung': 'bought_samsung', 'budget': 'bought_budget_brand'}
+TOP_SHARE = 4.0                 # a model is a top model when it holds at least this % of its brand's considerations
+PRICE_LOW, PRICE_HIGH = 0.8, 1.2  # price-similarity check: rival price between 80% and 120% of this model's price
+HISTORY_DAYS = 7                # earlier-session checks use considerations at least this many days after the data start
+GROUP_NAMES = {'lg': 'lg', 'samsung': 'samsung'}   # every other brand goes to 'other_four'
+RESULT_NAMES = {'lg': 'bought_lg', 'samsung': 'bought_samsung', 'other_four': 'bought_other_four'}
 
 
 def brand_group(brand):
-    return pd.Series(np.where(brand.isin(['lg', 'samsung']), brand, 'budget'), index=brand.index)
+    return pd.Series(np.where(brand.isin(['lg', 'samsung']), brand, 'other_four'), index=brand.index)
+
+
+def position(n_before, other_before):
+    return np.select([n_before == 0, other_before == 0], ['first_tv', 'after_same_brand_only'], 'after_other_brand')
 
 
 # ---------------------------------------------------------------------------------------------
@@ -60,7 +69,7 @@ rows['month'] = rows['first_view'].dt.strftime('%Y-%m')
 
 # ---------------------------------------------------------------------------------------------
 # 3. Outcome and funnel: this model, same session, at or after the first view. A cart or purchase logged in the same
-#    second as the first view belongs to the consideration (the count of such events is printed at the end).
+#    second as the first view belongs to the consideration (counted in data_audit.csv).
 # ---------------------------------------------------------------------------------------------
 own_p = P.merge(rows[KEY + ['rid', 'first_view']], on=KEY).query('event_time >= first_view')
 own_c = C.merge(rows[KEY + ['rid', 'first_view']], on=KEY).query('event_time >= first_view')
@@ -70,8 +79,8 @@ rows['purchased_after_cart'] = (rows['rid'].map(own_p.groupby('rid')['event_time
                                 > rows['rid'].map(own_c.groupby('rid')['event_time'].min())).astype(int)
 
 # ---------------------------------------------------------------------------------------------
-# 4. Earlier in the same session: TVs opened before this model. A TV purchase earlier in the same session starts a new
-#    search, so views before that purchase are ignored.
+# 4. Earlier in the same session: TVs opened before this model, over the whole session. The version that restarts the
+#    history after a TV purchase earlier in the session is built only for reset_sensitivity.csv.
 # ---------------------------------------------------------------------------------------------
 reset = (P[SESSION + ['event_time']].merge(rows[SESSION + ['rid', 'first_view']], on=SESSION)
          .query('event_time < first_view').groupby('rid')['event_time'].max())
@@ -79,18 +88,23 @@ rows['reset'] = rows['rid'].map(reset)
 sv = rows[['rid'] + SESSION + ['brand', 'first_view', 'reset']].merge(
     V[SESSION + ['product_id', 'brand', 'event_time']].rename(
         columns={'product_id': 'v_product', 'brand': 'v_brand', 'event_time': 'v_time'}), on=SESSION)
-sv = sv[(sv['v_time'] < sv['first_view']) & (sv['reset'].isna() | (sv['v_time'] > sv['reset']))]
+sv = sv[sv['v_time'] < sv['first_view']]
 sv['v_group'] = brand_group(sv['v_brand'])
 rows['tvs_opened_before'] = rows['rid'].map(sv.groupby('rid')['v_product'].nunique()).fillna(0).astype(int)
-for g in ['lg', 'samsung', 'budget']:
+for g in ['lg', 'samsung', 'other_four']:
     rows[f'{g}_opened_before'] = rows['rid'].isin(sv.loc[sv['v_group'] == g, 'rid']).astype(int)
 rows['other_brand_opened_before'] = rows['rid'].isin(sv.loc[sv['v_brand'] != sv['brand'], 'rid']).astype(int)
-rows['position_in_session'] = np.select(
-    [rows['tvs_opened_before'] == 0, rows['other_brand_opened_before'] == 0],
-    ['first_tv', 'after_same_brand_only'], 'after_other_brand')
+rows['position_in_session'] = position(rows['tvs_opened_before'], rows['other_brand_opened_before'])
+
+after_reset = sv[sv['reset'].isna() | (sv['v_time'] > sv['reset'])]
+n_reset = rows['rid'].map(after_reset.groupby('rid')['v_product'].nunique()).fillna(0).astype(int)
+other_reset = rows['rid'].isin(after_reset.loc[after_reset['v_brand'] != after_reset['brand'], 'rid']).astype(int)
+rows['position_reset'] = position(n_reset, other_reset)
 
 # ---------------------------------------------------------------------------------------------
-# 5. Later in the same session: what was bought after this model was opened
+# 5. Later in the same session: what was bought after this model was opened. One label per row, by priority (this
+#    model, then the first other brand bought, then another model of the same brand), so it is a classification of
+#    the consideration and does not list every purchase in the session.
 # ---------------------------------------------------------------------------------------------
 sp = rows[['rid'] + KEY + ['brand', 'first_view']].merge(
     P[SESSION + ['product_id', 'brand', 'event_time']].rename(
@@ -104,12 +118,12 @@ rows['session_result'] = np.select(
     ['bought_this_model', other_result.fillna(''), 'bought_other_model_same_brand'], 'bought_nothing')
 
 # ---------------------------------------------------------------------------------------------
-# 6. Two flags from outside the session, kept because they change conversion a great deal (see variable_decisions.csv)
+# 6. Two flags from outside the session. The course file is a curated sample, so earlier sessions of a user can be
+#    missing and both flags can only miss earlier visits and purchases, never invent them.
 # ---------------------------------------------------------------------------------------------
 up = rows[['rid', 'user_id', 'first_view']].merge(P[['user_id', 'event_time']], on='user_id')
-rows['last_tv_purchase_before'] = rows['rid'].map(up[up['event_time'] < up['first_view']].groupby('rid')['event_time'].max())
-rows['bought_tv_before'] = rows['last_tv_purchase_before'].notna().astype(int)
-ss = ev.groupby(SESSION)['event_time'].min().reset_index(name='start').sort_values('start', kind='stable')
+rows['bought_tv_before'] = rows['rid'].isin(up.loc[up['event_time'] < up['first_view'], 'rid']).astype(int)
+ss = ev.groupby(SESSION)['event_time'].agg(start='min', end='max').reset_index().sort_values('start', kind='stable')
 ss['returning_visitor'] = (ss.groupby('user_id').cumcount() > 0).astype(int)
 rows = rows.merge(ss[SESSION + ['returning_visitor']], on=SESSION, how='left')
 
@@ -127,11 +141,12 @@ ms['top_model'] = (ms['share_of_brand_pct'] >= TOP_SHARE).astype(int)
 ms.round(3).to_csv(OUT_DIR / 'top_model_selection.csv', index=False)
 rows['top_model'] = rows['product_id'].isin(ms.loc[ms['top_model'] == 1, 'product_id']).astype(int)
 
-RULES = [(f'Each model holds at least 3% of its brand', lambda d: d['share_of_brand_pct'] >= 3),
+RULES = [('Each model holds at least 3% of its brand', lambda d: d['share_of_brand_pct'] >= 3),
          (f'Each model holds at least {TOP_SHARE:g}% of its brand (chosen rule)', lambda d: d['share_of_brand_pct'] >= TOP_SHARE),
-         (f'Each model holds at least 5% of its brand', lambda d: d['share_of_brand_pct'] >= 5),
+         ('Each model holds at least 5% of its brand', lambda d: d['share_of_brand_pct'] >= 5),
          ('Five most-considered models of each brand', lambda d: d['rank_in_brand'] <= 5),
          ('Ten most-considered models of each brand', lambda d: d['rank_in_brand'] <= 10)]
+chosen = {br: set(ms.loc[(ms['brand'] == br) & (ms['top_model'] == 1), 'product_id']) for br in ['lg', 'samsung']}
 cut = []
 for label, rule in RULES:
     r = {'Rule': label}
@@ -140,6 +155,7 @@ for label, rule in RULES:
         sel = rule(d)
         top, rest = d[sel], d[~sel]
         r[f'{name} top models'] = int(sel.sum())
+        r[f'{name} same models as the chosen rule'] = 'yes' if set(top['product_id']) == chosen[br] else 'no'
         r[f'{name} share of considerations in top models (%)'] = top['share_of_brand_pct'].sum()
         r[f'{name} smallest share among top models (%)'] = top['share_of_brand_pct'].min()
         r[f'{name} largest share among other models (%)'] = rest['share_of_brand_pct'].max()
@@ -152,40 +168,42 @@ cutoffs = pd.DataFrame(cut).set_index('Rule')
 cutoffs.round(2).to_csv(OUT_DIR / 'top_model_cutoffs.csv')
 
 # ---------------------------------------------------------------------------------------------
-# 8. Checks behind the variable decisions (LG and Samsung considerations). The variables that are left out are built
-#    here only for this check and are not saved in the dataset.
+# 8. Variable checks (LG and Samsung considerations). The browsing variants that were left out are built here only for
+#    this table and are not saved in the dataset. They can be rebuilt for a sensitivity analysis from tv_events_clean.csv.
 # ---------------------------------------------------------------------------------------------
-hist = rows[['rid', 'user_id', 'session_id', 'brand', 'first_view', 'price', 'last_tv_purchase_before']].merge(
+hist = rows[['rid', 'user_id', 'session_id', 'brand', 'first_view', 'price']].merge(
     V[['user_id', 'session_id', 'brand', 'event_time', 'price']].rename(
         columns={'session_id': 'v_session', 'brand': 'v_brand', 'event_time': 'v_time', 'price': 'v_price'}), on='user_id')
-hist = hist[(hist['v_time'] < hist['first_view']) & (hist['v_brand'] != hist['brand'])
-            & (hist['last_tv_purchase_before'].isna() | (hist['v_time'] > hist['last_tv_purchase_before']))]
+hist = hist[(hist['v_time'] < hist['first_view']) & (hist['v_brand'] != hist['brand'])]
 earlier = hist[hist['v_session'] != hist['session_id']]
 age = earlier['first_view'] - earlier['v_time']
 same = hist[hist['v_session'] == hist['session_id']]
-similar_rids = set(same.loc[np.log(same['v_price'] / same['price']).abs() <= SIMILAR, 'rid'])
+ratio = same['v_price'] / same['price']
+similar_rids = set(same.loc[(ratio >= PRICE_LOW) & (ratio <= PRICE_HIGH), 'rid'])
 
 lsr = rows[rows['brand_group'].isin(['lg', 'samsung'])]
-full_week = lsr[lsr['first_view'] >= lsr['first_view'].min().normalize() + pd.Timedelta(days=7)]
-not_in_session = full_week[full_week['other_brand_opened_before'] == 0]
+history_start = lsr['first_view'].min().normalize() + pd.Timedelta(days=HISTORY_DAYS)
+late = lsr[(lsr['first_view'] >= history_start) & (lsr['bought_tv_before'] == 0)]   # repeat buyers would mix two effects
+not_in_session = late[late['other_brand_opened_before'] == 0]
 CHECKS = [  # name, decision, comparison rows, reference rows, reference description
     ('Another brand opened earlier in the same session', 'kept',
      lsr[lsr['other_brand_opened_before'] == 1], lsr[lsr['other_brand_opened_before'] == 0], 'no other brand opened earlier in the session')]
 for label, mask in [('within 48 hours', age <= pd.Timedelta(hours=48)), ('within 7 days', age <= pd.Timedelta(days=7)),
-                    ('at any earlier time since the last TV purchase', age.notna())]:
+                    ('at any earlier time in the data', age.notna())]:
     ids = set(earlier.loc[mask, 'rid'])
     CHECKS.append((f'Another brand opened in an earlier session {label}, none earlier in this session', 'left out',
                    not_in_session[not_in_session['rid'].isin(ids)], not_in_session[~not_in_session['rid'].isin(ids)],
-                   'no other brand opened in this session or in that window (considerations from 8 October)'))
+                   f'no other brand opened in this session or in that window (considerations from {history_start:%d %B}, '
+                   'users with no earlier TV purchase)'))
 with_rival = lsr[lsr['other_brand_opened_before'] == 1]
 CHECKS += [
-    ('Other brand opened earlier in the session was within 20% of this price', 'left out',
+    (f'Other brand opened earlier in the session was priced at {100 * PRICE_LOW:.0f}% to {100 * PRICE_HIGH:.0f}% of this model', 'left out',
      with_rival[with_rival['rid'].isin(similar_rids)], with_rival[~with_rival['rid'].isin(similar_rids)],
-     'other brand opened earlier in the session at a price more than 20% away'),
-    ('Returning visitor (an earlier session on the site, any category)', 'kept',
-     lsr[lsr['returning_visitor'] == 1], lsr[lsr['returning_visitor'] == 0], 'first session on the site'),
-    ('User bought a TV before this consideration (any session)', 'kept',
-     lsr[lsr['bought_tv_before'] == 1], lsr[lsr['bought_tv_before'] == 0], 'no earlier TV purchase')]
+     'other brand opened earlier in the session at a price outside that range'),
+    ('Returning visitor (an earlier session in the data, any category)', 'kept',
+     lsr[lsr['returning_visitor'] == 1], lsr[lsr['returning_visitor'] == 0], 'no earlier session in the data'),
+    ('User bought a TV before this consideration (any session in the data)', 'kept',
+     lsr[lsr['bought_tv_before'] == 1], lsr[lsr['bought_tv_before'] == 0], 'no earlier TV purchase in the data')]
 dec = []
 for name, decision, grp, ref, ref_text in CHECKS:
     r = {'Variable': name, 'Decision': decision, 'Reference group': ref_text}
@@ -199,19 +217,75 @@ for name, decision, grp, ref, ref_text in CHECKS:
 decisions = pd.DataFrame(dec).set_index('Variable')
 decisions.round(2).to_csv(OUT_DIR / 'variable_decisions.csv')
 
+# reset sensitivity: position over the whole session (used in the dataset) against position since the last TV purchase
+rs = []
+for definition, col in [('Whole session (used in the dataset)', 'position_in_session'), ('Since the last TV purchase in the session', 'position_reset')]:
+    for pos in ['first_tv', 'after_same_brand_only', 'after_other_brand']:
+        r = {'Definition': definition, 'Position': pos}
+        for g in ['lg', 'samsung', 'other_four']:
+            d = rows[(rows['brand_group'] == g) & (rows[col] == pos)]
+            r[f'{g} considerations'] = len(d)
+            r[f'{g} conversion (%)'] = 100 * d['purchased'].mean()
+        rs.append(r)
+reset_table = pd.DataFrame(rs).set_index(['Definition', 'Position'])
+reset_table.round(2).to_csv(OUT_DIR / 'reset_sensitivity.csv')
+
 # ---------------------------------------------------------------------------------------------
-# 9. Save
+# 9. Data audit
+# ---------------------------------------------------------------------------------------------
+lo_t, hi_t = pd.Timestamp('2019-10-01', tz='UTC'), pd.Timestamp('2019-12-01', tz='UTC')
+tv_views = V.groupby(KEY)['event_time'].min().rename('first_view_any')
+pa = P.join(tv_views, on=KEY)
+ca = C.join(tv_views, on=KEY)
+ss['hours'] = (ss['end'] - ss['start']).dt.total_seconds() / 3600
+tv_sessions = rows[SESSION].drop_duplicates().merge(ss, on=SESSION)
+per_session = rows.groupby(SESSION).size()
+audit = [
+    ('Raw events in the original file', len(raw), ''),
+    ('Exact duplicate events removed', len(raw) - len(ev), 'identical on all eight columns'),
+    ('Events in other product categories, left out of the TV files', int((ev['product_category'] != 'tv').sum()), ''),
+    ('TV events kept', len(tv_ev), ', '.join(f'{k} {v:,}' for k, v in tv_ev['event_type'].value_counts().items())),
+    ('Events outside 1 October to 30 November 2019', int(((ev['event_time'] < lo_t) | (ev['event_time'] >= hi_t)).sum()), 'all categories'),
+    ('Session IDs that appear under more than one user', int((ev.groupby('session_id')['user_id'].nunique() > 1).sum()),
+     'sessions are identified by user and session ID together'),
+    ('Duplicate user x session x model keys in tv_considerations.csv', int(rows.duplicated(KEY).sum()), ''),
+    ('TV purchase events with no view of the model in the same session', int(pa['first_view_any'].isna().sum()), ''),
+    ('TV purchase events logged before the first view of the model in the session', int((pa['event_time'] < pa['first_view_any']).sum()), ''),
+    ('TV cart events with no view of the model in the same session', int(ca['first_view_any'].isna().sum()), ''),
+    ('TV cart events logged before the first view of the model in the session', int((ca['event_time'] < ca['first_view_any']).sum()), ''),
+    ('Cart events logged in the same second as the first view', int((own_c['event_time'] == own_c['first_view']).sum()), 'counted as part of the consideration'),
+    ('Purchase events logged in the same second as the first view', int((own_p['event_time'] == own_p['first_view']).sum()), ''),
+    ('Purchased considerations with a cart event but no purchase after it', int(((rows['purchased'] == 1) & (rows['added_to_cart'] == 1) & (rows['purchased_after_cart'] == 0)).sum()), ''),
+    ('Considerations opened after a TV purchase earlier in the same session', int(rows['reset'].notna().sum()), 'see reset_sensitivity.csv'),
+    ('TV sessions lasting more than 24 hours, first to last event in any category', int((tv_sessions['hours'] > 24).sum()), ''),
+    ('Longest TV session, first to last event (hours)', round(float(tv_sessions['hours'].max()), 1), ''),
+    ('99th percentile of TV session length (hours)', round(float(tv_sessions['hours'].quantile(0.99)), 2), ''),
+    ('Most TV models opened in one session', int(per_session.max()), ''),
+    ('Sessions with 20 or more TV models opened', int((per_session >= 20).sum()),
+     f'{100 * per_session[per_session >= 20].sum() / per_session.sum():.1f}% of considerations'),
+    ('Users with 100 or more TV considerations', int((rows.groupby('user_id').size() >= 100).sum()), ''),
+]
+audit = pd.DataFrame(audit, columns=['Check', 'Value', 'Note']).set_index('Check')
+audit.to_csv(OUT_DIR / 'data_audit.csv')
+
+pd.Series({'top_model_share_pct': TOP_SHARE, 'price_similarity_low': PRICE_LOW, 'price_similarity_high': PRICE_HIGH,
+           'history_days': HISTORY_DAYS, 'history_check_start': f'{history_start:%Y-%m-%d}'}, name='value').rename_axis(
+    'parameter').to_csv(OUT_DIR / 'build_parameters.csv')
+
+# ---------------------------------------------------------------------------------------------
+# 10. Save
 # ---------------------------------------------------------------------------------------------
 cols = ['user_id', 'session_id', 'product_id', 'brand', 'brand_group', 'top_model', 'first_view', 'month', 'price',
         'purchased', 'added_to_cart', 'purchased_after_cart',
-        'tvs_opened_before', 'lg_opened_before', 'samsung_opened_before', 'budget_opened_before',
+        'tvs_opened_before', 'lg_opened_before', 'samsung_opened_before', 'other_four_opened_before',
         'other_brand_opened_before', 'position_in_session', 'session_result',
         'bought_tv_before', 'returning_visitor']
 out = rows.sort_values(['first_view', 'user_id', 'session_id', 'product_id'], kind='stable')[cols]
 assert not out.duplicated(KEY).any()
 assert (out['purchased_after_cart'] <= out['added_to_cart']).all()
 assert ((out['session_result'] == 'bought_this_model') == (out['purchased'] == 1)).all()
-assert (out.loc[out['brand_group'] == 'budget', 'top_model'] == 0).all()
+assert (out.loc[out['brand_group'] == 'other_four', 'top_model'] == 0).all()
+assert (out[out['position_in_session'] == 'first_tv'].groupby(SESSION).size() == 1).all()
 top_rows, other_rows = out[out['top_model'] == 1], out[out['top_model'] == 0]
 assert len(top_rows) + len(other_rows) == len(out)
 out.to_csv(DATA_DIR / 'tv_considerations.csv', index=False)
@@ -220,22 +294,18 @@ other_rows.to_csv(DATA_DIR / 'tv_considerations_without_top_models.csv', index=F
 
 pd.set_option('display.width', 220)
 pd.set_option('display.max_columns', 30)
-print(f'tv_events_clean.csv                       {len(tv_ev):,} events ({len(raw) - len(ev):,} exact duplicates removed from the full file)')
+print(f'tv_events_clean.csv                       {len(tv_ev):,} events')
 print(f'tv_considerations.csv                     {len(out):,} rows, {out["user_id"].nunique():,} users')
 print(f'tv_considerations_top_models.csv          {len(top_rows):,} rows')
 print(f'tv_considerations_without_top_models.csv  {len(other_rows):,} rows')
-print(f'Cart events in the same second as the first view: {int((own_c["event_time"] == own_c["first_view"]).sum())}; '
-      f'purchase events: {int((own_p["event_time"] == own_p["first_view"]).sum())}')
 print(out.groupby('brand_group').agg(rows=('purchased', 'size'), purchases=('purchased', 'sum'),
                                      conversion_pct=('purchased', lambda x: round(100 * x.mean(), 2))))
-print(f'\nTop-model rule: a model is a top model when it holds at least {TOP_SHARE:g}% of its brand\'s considerations.')
 n_top = ms.groupby('brand')['top_model'].sum()
-print(f"No LG or Samsung model holds between {ms.loc[ms['top_model'] == 0, 'share_of_brand_pct'].max():.2f}% and "
-      f"{ms.loc[ms['top_model'] == 1, 'share_of_brand_pct'].min():.2f}% of its brand's considerations, so any cutoff in that "
-      f"range gives the same split. Top models: LG {n_top['lg']}, Samsung {n_top['samsung']}.")
-print(ms[ms['rank_in_brand'] <= 12][['brand', 'rank_in_brand', 'product_id', 'considerations', 'share_of_brand_pct',
-                                      'cumulative_share_pct', 'conversion_pct', 'top_model']].round(2).to_string(index=False))
-print('\nThe split under the chosen rule and four alternatives (results/build/top_model_cutoffs.csv)')
-print(cutoffs.round(2).T.to_string())
-print('\nConversion by the variables kept and left out (results/build/variable_decisions.csv)')
-print(decisions.drop(columns='Reference group').round(2).to_string())
+print(f'\nTop-model rule: a model is a top model when it holds at least {TOP_SHARE:g}% of its brand\'s considerations. '
+      f'No LG or Samsung model holds between {ms.loc[ms["top_model"] == 0, "share_of_brand_pct"].max():.2f}% and '
+      f'{ms.loc[ms["top_model"] == 1, "share_of_brand_pct"].min():.2f}%, so any cutoff in that range gives the same split. '
+      f'Top models: LG {n_top["lg"]}, Samsung {n_top["samsung"]}.')
+print(f'\nData audit (results/build/data_audit.csv)\n{audit.to_string()}')
+print(f'\nThe top-model split under five rules (results/build/top_model_cutoffs.csv)\n{cutoffs.round(2).T.to_string()}')
+print(f'\nVariable checks (results/build/variable_decisions.csv)\n{decisions.drop(columns="Reference group").round(2).to_string()}')
+print(f'\nReset sensitivity (results/build/reset_sensitivity.csv)\n{reset_table.round(2).to_string()}')
