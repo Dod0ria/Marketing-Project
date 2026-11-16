@@ -1,0 +1,55 @@
+1. Make the navigation history definition explicit
+
+Currently, the navigation history is reset after each TV purchase. This is a possible methodological choice, but it means that `first_tv_in_visit` may identify a TV viewed after a purchase within the same session.
+
+I recommend using the position within the entire session as the primary definition, while keeping the post-purchase reset as a sensitivity check, with a clear justification.
+
+
+2. Correct the "±20%" price filter
+
+The current code actually applies an interval of approximately -16.7%/+20%, rather than a symmetric ±20% range.
+
+We should define precisely which interval we intend to use and ensure that the code implements it consistently.
+
+
+3. Rename variables that imply more than the data actually show
+
+- `budget` → `other_brands`: The current group does not necessarily identify lower-priced or budget products.
+- `window_7d_complete`: This variable should indicate that seven days have elapsed since the beginning of the dataset, without implying that the customer's browsing history is complete.
+
+The goal is to ensure that variable names accurately reflect what is observed, without suggesting unsupported interpretations.
+
+
+4. Review the definition of `next_step`
+
+Currently, `next_step` classifies subsequent outcomes according to a predefined hierarchy, meaning that it does not always identify the immediately following event.
+
+I recommend renaming it `observed_outcome` and explicitly documenting the priority order used to assign categories.
+
+Furthermore, viewing a competitor's product after already making a purchase should not be interpreted as abandoning the initially considered product.
+
+
+5. Add a concise data audit before saving
+
+The script should include a summary of:
+
+- Excluded observations and their reasons.
+- Uniqueness of the analytical key.
+- Temporal consistency of event sequences.
+- Anomalous event sequences.
+- Unusually long sessions.
+
+Expected values from previous notebooks should be used as validation benchmarks, rather than being artificially inserted into the generated outputs.
+
+
+6. Document the dataset columns
+
+The script references `tv_considerations_dictionary.md`, but I cannot currently locate this file.
+
+A brief description in the notebook or README would be sufficient, clearly distinguishing between:
+
+- Variables available at the time of the first product view.
+- Subsequent outcomes and events observed after the first view.
+
+This distinction is important to ensure that the analysis does not unintentionally use information that would not have been available at the initial observation point.
+prova

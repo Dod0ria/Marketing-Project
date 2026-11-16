@@ -1,0 +1,128 @@
+REVIEW OF 02_PRELIMINARY_ANALYSIS AND REPORT SECTIONS 1-4
+Priority-ordered technical and interpretative feedback
+
+Verdict: APPROVED WITH RESERVATIONS (7/10).
+The main unresolved weakness is the strength of the conclusions drawn from selected model groups and descriptive navigation patterns. The strongest improvement is that the exhibits are now reproducible and the reach split is explicitly an accounting exercise. Proceed after aligning the headline claims with the actual populations, units and uncertainty shown in the tables.
+
+Scope of verification
+I read the current 01 and 02 scripts and both supplied PDFs, and re-executed both scripts using temporary outputs. The run reproduced 115,711 TV considerations, including 3,492 purchased considerations across the six brands, and the key reported tables. This checks execution and numerical consistency; it does not establish causal validity or independently verify every variable definition. No project code or original datasets were changed.
+
+Several earlier problems have been addressed: considerations are distinguished from events, the price/category counterexamples are acknowledged, the reach split includes alternative accounting methods, and recommendations are framed as tests. The points below concern what remains.
+
+
+1. CRITICAL: THE CLAIM THAT LG'S TYPICAL MODEL CONVERTS AS WELL AS SAMSUNG'S IS TOO STRONG
+Location: Report guide 4.7; analysis Table 4.7f; 02 lines 841-865.
+
+Description and reason:
+The equality at 1.69% applies to an unweighted average of only 37 LG and 36 Samsung non-top models with at least 100 considerations. The full non-top groups contain 98 and 85 models. Without the 100-consideration restriction, their unweighted mean conversion rates are approximately 1.29% and 1.93%. Weighting by considerations instead gives 1.78% and 2.26%.
+Furthermore, the non-top gap's t statistic of -1.83 does not establish equivalence. A normal-approximation interval using the reported user/product-clustered standard error is approximately -0.99 to +0.03 percentage points, which still includes a material LG disadvantage.
+
+Solution:
+State exactly which selected models have similar observed averages. Keep consideration-weighted and equally weighted comparisons distinct. Report the remaining gap and uncertainty; remove the broad claim about LG's typical model. Describe concentration in top models without declaring the rest equivalent. The existing cutoff sensitivity tables are useful, but do not resolve the separate 100-consideration selection issue.
+
+
+2. HIGH: CONSIDERATION-LEVEL OUTCOMES ARE INTERPRETED AS SESSION-LEVEL WINS
+Location: Report guide 4.5; analysis Tables 4.5d and 4.6a; 01 section 5.
+
+Description and reason:
+The head-to-head columns use 8,044 LG considerations and 6,087 Samsung considerations, not unique sessions. One session can contribute multiple rows, so one purchase can appear as the later outcome of several considerations. The report nevertheless says that LG or Samsung wins these sessions.
+Also, session_result is a priority classification: buying the focal model overrides other purchases, and buying another brand overrides buying another model of the same brand. It is not necessarily the first purchase or an exhaustive record of all brands bought.
+
+Solution:
+Either retain these tables as consideration-level classifications and explain the priority order, or rebuild a separate session-level table for claims about session winners. Define a first-purchase rule or an explicit multiple-brand-purchase category. Do not infer session wins by adding the current row percentages.
+
+
+3. HIGH: THE PRECISION CONVENTION IS STILL INCONSISTENT
+Location: analysis rates(), gap_precision(), Tables 1.1/4.7f and Figures 1.2/4.5a/4.6; guide 3.7.
+
+Description and reason:
+Some intervals treat considerations as independent, while other comparisons cluster by product or by user and product. Calling the Wilson intervals indicative does not make them dependence-adjusted 95% intervals. Session-level intervals also ignore repeated sessions from the same user.
+The top-model comparison contains only 13 products: seven LG and six Samsung. Standard clustered inference is particularly fragile there, so a statistic near 2 should not carry a strong significance claim.
+
+Solution:
+Use one stated primary inference convention for consideration-level brand gaps, addressing repeated users and products, and label other conventions as sensitivities. For session-level rates, address repeated users. Replace independent intervals in inferential exhibits or omit them. Treat the 13-product result cautiously and assess a suitable small-cluster procedure before relying on its significance. The raw OLS regression in gap_precision() is a way to estimate the unadjusted mean difference, not an inappropriate purchase-response model by itself.
+
+
+4. HIGH: VARIABLE RETENTION IS JUSTIFIED MAINLY BY OBSERVED OUTCOME DIFFERENCES
+Location: 01 sections 6/8; analysis Tables 3.4 and 4.5a; guide 3.3.
+
+Description and reason:
+Variables are kept because they change conversion a great deal and discarded because unadjusted differences look small. A small marginal association does not show that a variable is irrelevant to an adjusted brand comparison; correlated predictors can behave differently jointly. Conversely, a large association does not automatically make a variable an appropriate control.
+Freezing the specification now does not erase the exploratory, outcome-informed choices already made.
+
+Solution:
+Define a short baseline and an extended specification using timing, substantive purpose and redundancy, not a minimum raw conversion difference. Test excluded browsing-history variants as targeted sensitivities. Document the exploratory choices rather than describing the specification as independent of the observed results. Keep later-purchase variables strictly as outcomes, not first-view controls.
+
+
+5. MEDIUM-HIGH: STATISTICAL SIGNIFICANCE SHOULD NOT BE THE MAIN JUSTIFICATION FOR TVs
+Location: Report guide 4.1; analysis Table 4.1.
+
+Description and reason:
+The guide highlights TVs as the only category significant at 5% after product clustering. This follows inspection of six categories. A nominal interval does not account for that selection, and a significant gap in one category versus a non-significant gap in another does not establish that the two gaps differ.
+
+Solution:
+Lead with managerial relevance, sample support and LG/Samsung price overlap. Retain the explicit disclosure that the gap informed the exploratory choice. Present category intervals as exploratory comparisons, not proof that TVs are LG's uniquely problematic category or that the result generalises across categories.
+
+
+6. MEDIUM: THE POSITION VARIABLE DESCRIBES A POST-PURCHASE EPISODE, NOT ALWAYS THE WHOLE SESSION
+Location: 01 section 4; analysis Tables 3.2/4.5b; guide 3.3/4.5.
+
+Description and reason:
+Earlier views are ignored after a TV purchase in the same session. In the reproduced data, 39 sessions contain more than one consideration classified as first_tv, with 46 such rows beyond one per session. This is compatible with the reset rule, but not with the literal label first TV opened in the session.
+
+Solution:
+Either rename the variable and table labels to first TV since the last purchase in the session, or use whole-session history as the primary definition and reset history as a sensitivity. Distinguish these episode-based tables from Tables 4.6b/4.6c, which use the actual first consideration of the whole session.
+
+
+7. MEDIUM: FIRST-MOVER AND FLOW RESULTS NEED A NARROWER INTERPRETATION
+Location: guide 4.6; analysis Tables 4.6b-4.6d.
+
+Description and reason:
+The 69.8% Samsung-first statistic concerns the 6,109 sessions observed considering both brands, not all TV searches. The 54.6% random-order benchmark conditions on the products eventually considered and assumes their order could be shuffled. It is a descriptive benchmark, not random assignment or evidence of a placement effect.
+Likewise, 22.3% versus 22.8% observed cross-brand navigation does not identify the effect of either brand's page, or establish equivalent retention.
+
+Solution:
+State the selected population and benchmark assumptions. Describe observed ordering and subsequent navigation. Replace claims that pages send or do not send shoppers to rivals with claims about recorded session paths. Keep the distinction between visiting another brand and purchasing it.
+
+
+8. MEDIUM: THE CLAIM OF INDEPENDENT VARIABLE VERIFICATION IS NOT YET AUDITABLE HERE
+Location: guide 3.8.
+
+Description and reason:
+The guide says 03_verify_variables.py independently checked all variables on 3,824 rows. That file is not present in the local repository inspected. Re-running 01 and 02 reproduces the pipeline but does not establish that this independent check occurred or that it validates the interpretation of the variables.
+
+Solution:
+Add the verifier and a concise result log to the shared repository, including sample selection/seed and edge cases. Otherwise qualify or remove the completed-verification claim. This is a verifiability issue, not evidence that the colleague did not perform the check elsewhere.
+
+
+9. LOWER PRIORITY: CORRECT REMAINING DEFINITIONS AND OVERSTATEMENTS
+
+a) The price-similarity check in 01 still uses abs(log(price ratio)) <= log(1.2), giving approximately 0.833-1.20, not 0.80-1.20. Correct the rule or its description, then regenerate the relevant variable-decision row.
+
+b) In 02, purchases minus purchased_after_cart is labelled purchases without a cart event. The run includes three purchased considerations with a cart but no strictly later purchase (two Artel, one TCL). Rename this to purchases without a qualifying cart-to-purchase sequence, or count truly absent carts separately. The LG/Samsung values are unaffected in this run.
+
+c) Starting the history check on 8 October gives seven elapsed calendar days, not a complete browsing history: the instructor sampled sessions rather than entire user histories. Qualify the claim of a full week observed.
+
+d) No sessions with extreme model counts does not establish absence of bots. Similarly, the late-November period does not establish observed promotions without a promotion variable. Describe the checks and dates without asserting these mechanisms.
+
+
+10. REPORT STRUCTURE: RESERVE SPACE FOR THE ANALYSIS THAT ANSWERS THE RQ
+Location: guide page allocation and exhibit map.
+
+Description and reason:
+Sections 1-4 are allocated approximately 7.5-9 pages and nine main-text exhibits. Against the official 12-page report limit, this leaves little space for methods, adjusted findings, managerial recommendations and limitations. The guide is only an opening-sections plan, so their absence here is not itself an omission; the allocation is the concern.
+
+Solution:
+Set a page budget for the whole report before drafting. Condense the exploratory narrative and retain only exhibits that change the answer or decision. Keep the rest as supporting material, checking the appendix-page treatment with the instructor rather than assuming appendices are exempt. Maintain one primary RQ and clearly identify which findings are descriptive and which are adjusted.
+
+
+Suggested order of resolution
+Resolve points 1-4 before using the current narrative as a basis for conclusions or final models. Address 5-8 before freezing the report and analytical definitions. Batch the small corrections in 9 and set the overall page budget in 10 before drafting.
+
+Sources reviewed
+- 01_build_tv_dataset.py and 02_preliminary_analysis.py, current local repository.
+- preliminary_analysis-1.pdf, especially Tables 3.2-3.4, 4.5d, 4.6b and 4.7f.
+- Report_guide_Sections_1_to_4.pdf, especially sections 3.3, 3.7-3.8 and 4.1-4.7.
+- Earlier project notebooks and official project guidelines as contextual references.
+
+This file is internal analytical feedback, not text drafted for the final assessed report. The review used the tribunale-llm critical-evaluation approach; the requested priority list determines the output structure.
