@@ -33,7 +33,7 @@ The column "Known at the first view" says whether the value was available when t
 | `user_id`, `session_id`, `product_id` | yes | Identify the row. A session is a user and session pair, because four session IDs appear under more than one user. |
 | `brand` | yes | artel, haier, kivi, lg, samsung or tcl |
 | `brand_group` | yes | lg, samsung or other_four (Artel, Haier, Kivi and TCL together) |
-| `top_model` | yes, from the two months as a whole | 1 when the model holds at least 4% of its brand's considerations over the two months. Only LG and Samsung models can be top models. |
+| `top_model` | no, retrospective | 1 when the model holds at least 4% of its brand's considerations over the two months. Only LG and Samsung models can be top models. |
 | `first_view` | yes | Time of the first view of this model in this session |
 | `month` | yes | 2019-10 or 2019-11, from `first_view` |
 | `price` | yes | Price at the first view, in the retailer's unidentified currency |
@@ -72,4 +72,4 @@ The earlier version also measured whether another brand had been viewed in earli
 
 ## Checks
 
-`03_verify_variables.py` recomputes every derived column for a stratified sample of rows drawn with seed 2026, using plain loops over each user's events that share no code with the build script. The sample includes every special case. It also runs logical checks on the full file, checks that the two split files contain exactly the rows of the main file, and recomputes the top-model rule from the events. Its output is saved in `results/03_verification_output.txt`.
+`01_build_tv_dataset.py` implements the full-file assertions and writes `results/build/data_audit.csv`. The current repository does not contain the previously referenced `03_verify_variables.py` or its verification log, so independent row-by-row recomputation cannot be claimed. Such a verifier would be a separate addition; the model notebook `03_models.ipynb` is not that verifier.

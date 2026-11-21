@@ -354,7 +354,7 @@ dec.insert(0, 'Decision', decisions['Decision'])
 save_table('3.4', 'Conversion by each variable kept in the dataset and by each variable left out', dec,
            'Computed by 01_build_tv_dataset.py on LG and Samsung considerations. Each row compares the considerations in the group with '
            'the reference group named in the row. The rows on earlier sessions use considerations from '
-           f"{pd.Timestamp(params['history_check_start']):%d %B}" ' onward, when seven days of the data have elapsed, by users with no '
+           f"{pd.Timestamp(params['history_check_start']):%d %B}" ' onward, when seven days of the data have elapsed, for considerations with no '
            'earlier TV purchase and with no other brand opened earlier in the same session. The course file is a curated sample, so a '
            'user\'s earlier sessions can be missing. A difference in this table does not by itself decide whether a variable belongs in '
            'a model.',
@@ -579,10 +579,10 @@ def mix_split(d, cols):
     lg_at_sm_mix = (ws[common] * rl[common]).sum() / ws[common].sum()
     sm_at_lg_mix = (wl[common] * rs[common]).sum() / wl[common].sum()
     LG, SM = lg['purchased'].mean(), sm['purchased'].mean()
-    return {'Raw gap (pp)': 100 * (LG - SM), 'Part due to shopper mix (pp)': 100 * (LG - lg_at_sm_mix),
+    return {'Raw gap (pp)': 100 * (LG - SM), 'Composition contribution (pp)': 100 * (LG - lg_at_sm_mix),
             'Part within the same type of shopper (pp)': 100 * (lg_at_sm_mix - SM),
-            'Share due to shopper mix (%)': 100 * (LG - lg_at_sm_mix) / (LG - SM),
-            'Share due to shopper mix, Samsung reweighted to LG\'s mix (%)': 100 * (sm_at_lg_mix - SM) / (LG - SM),
+            'Composition share of the raw gap (%)': 100 * (LG - lg_at_sm_mix) / (LG - SM),
+            'Composition share, Samsung reweighted to LG\'s mix (%)': 100 * (sm_at_lg_mix - SM) / (LG - SM),
             'Groups compared': len(common), 'Samsung considerations in groups that also hold LG considerations (%)': 100 * ws[common].sum()}
 
 
@@ -592,14 +592,14 @@ SPLITS = [('Another brand opened earlier in the session (yes or no)', ['other_br
 mix = []
 for name, cols in SPLITS:
     r = {'Shopper type defined by': name, **mix_split(ls, cols)}
-    r['Share due to shopper mix, without users who bought a TV before (%)'] = mix_split(ls[ls['bought_tv_before'] == 0], cols)['Share due to shopper mix (%)']
+    r['Composition share, excluding considerations after an earlier recorded TV purchase (%)'] = mix_split(ls[ls['bought_tv_before'] == 0], cols)['Composition share of the raw gap (%)']
     mix.append(r)
 t44b = pd.DataFrame(mix).set_index('Shopper type defined by')
 save_table('4.4b', 'The LG minus Samsung conversion gap split into shopper mix and the gap within the same type of shopper', t44b,
            'The shopper-mix part is LG\'s conversion minus the conversion LG would have if its considerations were spread across shopper '
-           'types as Samsung\'s are. The other part is the gap that remains between the two brands for the same type of shopper. The '
+           'types as Samsung\'s are. The other part compares the two brands within the observed groups; individual shoppers are not held fixed. The '
            'second share does the reweighting the other way round. The last row uses every combination of the four characteristics as a '
-           f'shopper type. This is a descriptive reweighting, with no model. {UNIT}', [F_CONS], feeds='Report Appendix A4')
+           f'shopper type. This is a descriptive reweighting, not a causal attribution. {UNIT}', [F_CONS], feeds='Report Appendix A4')
 
 # ---------------------------------------------------------------------------------------------
 # Section 4.5. The shopper's state when the model is opened
@@ -844,7 +844,7 @@ t47a = pd.DataFrame({'LG': k.loc['lg', FACTORS + ['purchases']], 'Samsung': k.lo
 t47a['LG / Samsung'] = t47a['LG'] / t47a['Samsung']
 for name, v_ in [('Log share (%)', log_sh), ('Shapley share (%)', shap_sh),
                  ('LG given only this Samsung factor (%)', lg_sh), ('Samsung given only this LG factor (%)', sm_sh),
-                 ('Log share, without users who bought a TV before (%)', shares(factors(ls[ls['bought_tv_before'] == 0]))[0]),
+                 ('Log share, without considerations after an earlier recorded TV purchase (%)', shares(factors(ls[ls['bought_tv_before'] == 0]))[0]),
                  ('Log share, models outside the top models only (%)', shares(factors(rest[rest['brand_group'] != 'other_four']))[0])]:
     t47a[name] = list(v_) + [v_.sum()]
 t47a.index = ['Sessions reaching the brand', 'Considerations per session', 'Conversion per consideration (%)', 'Purchased considerations']
@@ -855,7 +855,7 @@ save_table('4.7a', 'LG\'s shortfall in purchased TV considerations against Samsu
            'of each factor\'s ratio by the log of the ratio of purchased considerations. The Shapley share averages, over the six orders '
            'in which LG\'s three values can be replaced by Samsung\'s, the purchased considerations each replacement adds. The next two '
            'columns replace one factor only, starting from LG or from Samsung, and their totals differ from 100 because the factors '
-           'multiply. The last two columns repeat the log share without users who bought a TV before and with only the models outside '
+           'multiply. The last two columns repeat the log share without considerations after an earlier recorded TV purchase and with only the models outside '
            'the top models. This is an accounting identity, with no model.', [F_CONS, F_REST], feeds='Report Figure 4')
 
 fig, ax = plt.subplots(figsize=(7.5, 2.8), layout='constrained')

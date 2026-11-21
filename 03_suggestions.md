@@ -1,4 +1,25 @@
-# Review of proposed step 03
+# Status after review of the committed notebook — 21 November 2026
+
+The review below concerns the earlier `03_models.html` export. Its statements that the executable notebook is missing, and its old model/table references and numerical results, are historical. The maintained modelling file is now `03_models.ipynb`, producing Tables 5.1–5.8 and Figure 5.1.
+
+The current pipeline was rerun from the original data in a separate temporary workspace. `00`, `01`, `02` and all code cells of `03` completed. The corrected choice sample contains 4,105 alternatives in 1,220 visits, with 263 visits in the LG/Samsung subset. The raw conversion gap is −0.860 pp; the baseline adjusted gap is −0.517 pp (two-way p = 0.075; product-wild p = 0.124). The choice LG odds ratio is about 0.781 (custom two-way p = 0.086), and the within-visit LPM gives −6.73 pp (p = 0.025). Model 3 gives about 59% fewer considerations per observed LG product at the same median price.
+
+| Earlier issue | Current status |
+| --- | --- |
+| Alternatives first opened after purchase; visits with another product purchased | Corrected in the notebook; the final sample reapplies the minimum-choice-set rule |
+| Reach versus considerations per product | Distinguished in the main text; the introduction must name all three accounting factors |
+| Inference convention and conflicting p-values | Procedures are declared and both results are reported; the user bootstrap does not independently validate the custom product/two-way covariance |
+| “Same shopper”, causal coefficient-change shares and incoherent two-option example | Main wording and scenarios corrected; remaining interpretations require the qualifications above |
+| Price imputation, observed activity span and optional status | Diagnostics and sensitivities added; the price model remains outside the central argument |
+| LPM prediction range | Reported: 0.40% and 0.94% below zero in baseline and extended models |
+| Retrospective top-model flag and history definitions | Mostly documented; distinguish 204 LG/Samsung post-purchase considerations from 364 across all brands, and row exclusions from user exclusions |
+| Executable notebook | Present; packaging request resolved |
+
+Remaining changes concern cross-file documentation, row-exclusion labels, the scope of bootstrap validation and the boundary between fitted scenarios and forecasts. No change to the cohort definition or regression specification is required by the consistency audit. Product-level median prices remain fixed in the shopper bootstrap, and small shopper-bootstrap errors do not establish negligible product dependence.
+
+---
+
+# Historical review of the earlier HTML export
 
 **Verdict: approved with reservations, 7/10.** The analysis is reproducible and has a useful connection to the reach/conversion question. The main remaining problems concern the definition of the choice set, alignment of estimands and interpretation of inference. They do not establish that the reported coefficients were fabricated or incorrectly calculated.
 

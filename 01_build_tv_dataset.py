@@ -194,7 +194,7 @@ for label, mask in [('within 48 hours', age <= pd.Timedelta(hours=48)), ('within
     CHECKS.append((f'Another brand opened in an earlier session {label}, none earlier in this session', 'left out',
                    not_in_session[not_in_session['rid'].isin(ids)], not_in_session[~not_in_session['rid'].isin(ids)],
                    f'no other brand opened in this session or in that window (considerations from {history_start:%d %B}, '
-                   'users with no earlier TV purchase)'))
+                   'considerations with no earlier recorded TV purchase)'))
 with_rival = lsr[lsr['other_brand_opened_before'] == 1]
 CHECKS += [
     (f'Other brand opened earlier in the session was priced at {100 * PRICE_LOW:.0f}% to {100 * PRICE_HIGH:.0f}% of this model', 'left out',
