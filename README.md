@@ -56,4 +56,3 @@ The results were produced with these versions of the course files (SHA-256).
 | File | SHA-256 |
 | --- | --- |
 | `electronics_market_behavior.csv` | `3303a56e62cff3e38491d58e41f40706317c500039c26f135bc89a811bc59022` |
-| `appliance_brand_reviews.csv` | `64b57e87b44ec047403bf1b29bdc60ecd9ead2add64b8327ac6011524bb31a60` |
