@@ -15,7 +15,7 @@ any-folder/
 │   ├── 02_preliminary_analysis.ipynb
 │   ├── 03_models.ipynb
 │   ├── tv_considerations_dictionary.md
-│   └── results/                          written by the code
+│   └── results/                      
 └── data/
     └── 01_LG_Electronics_Appliances/
         ├── electronics_market_behavior.csv
