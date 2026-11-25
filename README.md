@@ -51,7 +51,7 @@ Each results folder holds an `exhibit_index.csv` that lists its tables and figur
 
 ## Data version
 
-The results were produced with these versions of the course files (SHA-256).
+The results were produced with these versions of the course files.
 
 | File |
 | --- |
