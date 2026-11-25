@@ -53,7 +53,7 @@ The column "Known at the first view" says whether the value was available when t
 
 **Earlier activity of the user.** `returning_visitor` looks at the user's earlier sessions. `bought_tv_before` looks at the user's earlier sessions and also at the part of the current session before the first view, so a TV bought earlier in the same session sets it. They are the only columns that use the user's activity outside the current session. The course file is a sample of sessions, so a user's earlier visits and purchases can be missing. Both flags can therefore miss earlier activity, but they never record activity that did not happen.
 
-**Model popularity.** `model_share_of_brand_pct`, `model_rank_in_brand` and `top_model` are computed over the whole two months. They describe how popular a model was over the period and say nothing about what the shopper could see at the first view, so they are used to split the sample and never as a description of the shopper. Table 2.15 of the descriptive analysis compares the 4% cutoff with three alternative rules.
+**Model popularity.** `model_share_of_brand_pct`, `model_rank_in_brand` and `top_model` are computed over the whole two months. They describe how popular a model was over the period and say nothing about what the shopper could see at the first view, so they are used to split the sample and never as a description of the shopper. Table 2.13 of the descriptive analysis compares the 4% cutoff with three alternative rules.
 
 **Controls.** The controls in the models of the purchase are columns marked yes in "Known at the first view", with one exception. `top_model` enters Model 1c through its interaction with LG and enters Model 2 as a covariate. Those two specifications therefore describe purchases using information that was not available at the first view, and they cannot predict a purchase at that moment. Outcome columns, including `session_result`, never enter a model as controls.
 
@@ -61,4 +61,4 @@ The column "Known at the first view" says whether the value was available when t
 
 `session_result` takes one value per row, by priority. If this model was bought, it is bought_this_model. Otherwise, if a TV of another brand was bought later in the session, it is bought_lg, bought_samsung or bought_other_four, for the first such purchase. Otherwise, if another model of the same brand was bought, it is bought_other_model_same_brand. Otherwise it is bought_nothing.
 
-The column classifies each consideration. A session with several considerations can therefore count one purchase more than once, so statements about which brand a session ended up buying rely on Table 2.9 of the descriptive analysis, which counts each session once.
+The column classifies each consideration. A session with several considerations can therefore count one purchase more than once, so statements about which brand a session ended up buying rely on Table 2.8 of the descriptive analysis, which counts each session once.

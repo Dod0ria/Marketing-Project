@@ -40,7 +40,7 @@ Run the notebooks from a fresh kernel with Run All, and the script with `python 
 | --- | --- | --- | --- | --- |
 | 1 | `00_scope_and_methodology_rationale.ipynb` | The two course files | `results/scope/` (Tables 0.1 to 0.5, Figures 0.1 to 0.4) | About 10 seconds |
 | 2 | `01_build_tv_dataset.py` | `electronics_market_behavior.csv` | `events_clean.csv` and `tv_considerations.csv` in the data folder | About 30 seconds |
-| 3 | `02_preliminary_analysis.ipynb` | The two working files | `results/preliminary/` (Tables 2.1 to 2.15, Figures 2.1 to 2.6) | About 30 seconds |
+| 3 | `02_preliminary_analysis.ipynb` | The two working files | `results/preliminary/` (Tables 2.1 to 2.15, Figures 2.1 to 2.4) | About 30 seconds |
 | 4 | `03_models.ipynb` | The two working files, and the exhibits saved by steps 1 and 3 for the combined file | `results/models/` (Tables 3.1 to 3.9, Figure 3.1) and `results/figures_and_tables.html` | About 45 seconds |
 
 `01_build_tv_dataset.py` ends with an independent recomputation of every derived column on a sample of rows and with logical checks on all rows. It stops with an error if any check fails and saves the two files only after every check has passed.
